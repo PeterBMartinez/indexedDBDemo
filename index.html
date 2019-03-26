@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>IndexedDB Demo</title>
+</head>
+<body>
+    DB <input type="text" value = "notes" id = "txtDB">
+    Version <input type="text" value = "1" id="txtVersion">
+    <button id="btnCreateDB">Create DB</button>
+
+    <button id="btnAddNote">Add Note</button>
+    <button id="btnViewNotes">View Notes</button>
+
+    <script>
+        let db = null;
+        const btnCreateDB = document.getElementById("btnCreateDB");
+        const btnAddNote = document.getElementById("btnAddNote");
+        const btnViewNotes = document.getElementById("btnViewNotes");
+        btnCreateDB.addEventListener("click", createDB);
+        btnAddNote.addEventListener('click', addNote);
+        btnViewNotes.addEventListener('click', viewNotes);
+
+        function viewNotes() {
+            const transaction = db.transaction('personal_notes', "readonly");
+            const notes = transaction.objectStore("personal_notes");
+            const request = notes.openCursor();
+            request.onsuccess = event => {
+                const cursor = event.target.result
+                if(cursor) {
+                    alert(`Title: ${cursor.key} Text: ${cursor.value.text}`)
+                    // do something with the cursor
+                    cursor.continue()
+                }
+            }
+        }
+
+        function addNote() {
+            const note = {
+                title: 'note1',
+                text: 'This is my note baby'
+            }
+            const transaction = db.transaction('personal_notes', "readwrite");
+            const personalNotes = transaction.objectStore("personal_notes");
+            personalNotes.add(note);
+        }
+
+        function createDB(){
+            const dbName = document.getElementById("txtDB").value;
+            const dbVerison = document.getElementById("txtVersion").value;
+
+            const request = indexedDB.open(dbName, dbVerison);
+            // on upgrade needed
+            request.onupgradeneeded = event => {
+                db = event.target.result;
+                // can only create the database tables in this life cycle, you can make them in the success call but your going to have to use transactions. 
+                const personalNotes = db.createObjectStore("personal_notes", {keyPath: "title"});
+                const todoNotes = db.createObjectStore("todo_notes", {keyPath: "title"});
+
+                alert(`upgrade is called\n database name: ${db.name}\n database version: ${db.version}`)
+            }
+            //on success
+            request.onsuccess = event => {
+                db = event.target.result
+                alert(`success is called\n database name: ${db.name}\n database version: ${db.version}`)
+            }
+            //on error
+            request.onerror = event => {
+                alert(event.target.error)
+            }
+        }
+
+    </script>
+</body>
+</html>
